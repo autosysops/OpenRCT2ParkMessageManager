@@ -12,4 +12,6 @@ In game click the park map menu item, there you will see the option "Manage Park
 
 ## Changelog
 
+1.1 - Added option to select a ride or guest for the message which support it.
+
 1.0 - Initial version.
