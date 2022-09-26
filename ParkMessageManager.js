@@ -1,3 +1,6 @@
+// Settings
+var MAX_LINE_LENGTH = 52;
+
 // Vars
 var selected_message = -1;
 var new_message_type = "attraction";
@@ -5,6 +8,7 @@ var new_subject_type = "";
 var new_message_colour = "TOPAZ";
 var new_message_text = "";
 var new_subject = -1;
+var message_refresh = 0;
 
 var columns = [
     {
@@ -66,68 +70,189 @@ function update_parkmessages() {
     // Clear first
     parkmessages = [];
     for (var pm = 0; pm < park.messages.length; pm++) {
-        // Create a seperator with the date of the message
-        var date = calculate_date(park.messages[pm].day, park.messages[pm].month);
-        if (selected_message == pm) {
-            date = "[SELECTED] " + date
-        }
-        parkmessages.push({
-            id: pm,
-            message: {
-                type: "seperator",
-                text: date
-            }
-        }
-        )
-
-        // Check if the message has an image
-        var hasimage = false;
-        var spritenum = get_message_type_image(park.messages[pm].type);
-        var imagestring = "";
-        if (spritenum > 0) {
-            hasimage = true;
-            imagestring = get_image_formatting(spritenum);
-        }
-
-        // Add the text
-        var messagetexts = park.messages[pm].text.split("{NEWLINE}").join("{NEWLINE_SMALLER}").split(("{NEWLINE_SMALLER}"));
-        var openformatting = "";
-
-        for (var m = 0; m < messagetexts.length; m++) {
-            var istring = "";
-            if (m == 0) {
-                istring = imagestring;
+        if(park.messages[pm].isArchived) {
+            // Create a seperator with the date of the message
+            var date = calculate_date(park.messages[pm].day, park.messages[pm].month);
+            if (selected_message == pm) {
+                date = "[SELECTED] " + date
             }
             parkmessages.push({
                 id: pm,
-                message: [
-                    openformatting + messagetexts[m],
-                    istring
-                ]
-            });
-            var matches = messagetexts[m].match(/{(.*?)}/g);
-            if (matches) {
-                for (var ma = 0; ma < matches.length; ma++) {
-                    // Check if the formatting code is a colour, if so add it to the next line
-                    for (var c = 0; c < messagecolours.length; c++) {
-                        if (matches[ma] == ("{" + messagecolours[c] + "}")) {
-                            openformatting += matches[ma];
+                message: {
+                    type: "seperator",
+                    text: date
+                }
+            }
+            )
+
+            // Check if the message has an image
+            var hasimage = false;
+            var spritenum = get_message_type_image(park.messages[pm].type);
+            var imagestring = "";
+            if (spritenum > 0) {
+                hasimage = true;
+                imagestring = get_image_formatting(spritenum);
+            }
+
+            // Add the text
+            var messagetexts = park.messages[pm].text.split("{NEWLINE}").join("{NEWLINE_SMALLER}").split(("{NEWLINE_SMALLER}"));
+            var openformatting = "";
+
+            for (var m = 0; m < messagetexts.length; m++) {
+                // Check if message is to long and if so break it up in parts.
+                var mts = [];
+                if(get_message_actual_length(messagetexts[m],true) > MAX_LINE_LENGTH) {
+                    var start = 0;
+                    do {
+                        var substring = get_message_substring(messagetexts[m],MAX_LINE_LENGTH,start);
+                        start += MAX_LINE_LENGTH;
+                        if(substring != "") {
+                            mts.push(substring);
+                        }
+                    } while(substring != "")
+                }
+                else {
+                    mts.push(messagetexts[m]);
+                }
+                for (var ms = 0; ms < mts.length; ms++) {
+                    var istring = "";
+                    if (m == 0 && ms == 0) {
+                        istring = imagestring;
+                    }
+                    parkmessages.push({
+                        id: pm,
+                        message: [
+                            openformatting + mts[ms],
+                            istring
+                        ]
+                    });
+                    var matches = mts[ms].match(/{(.*?)}/g);
+                    if (matches) {
+                        for (var ma = 0; ma < matches.length; ma++) {
+                            // Check if the formatting code is a colour, if so add it to the next line
+                            for (var c = 0; c < messagecolours.length; c++) {
+                                if (matches[ma] == ("{" + messagecolours[c] + "}")) {
+                                    openformatting += matches[ma];
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (hasimage && messagetexts.length < 2) {
-            parkmessages.push({
-                id: pm,
-                message: [
-                    "",
-                    ""
-                ]
-            });
+            if (hasimage && messagetexts.length < 2) {
+                parkmessages.push({
+                    id: pm,
+                    message: [
+                        "",
+                        ""
+                    ]
+                });
+            }
         }
     }
+}
+
+function get_message_actual_length(text,casesensitive) {
+    var opensigns = 0;
+    var count = 0;
+    for (var i = 0; i < text.length; i++) {
+        switch(text[i]) {
+            case "{":
+                opensigns ++;
+                break;
+
+            case "}":
+                opensigns --;
+                break;
+
+            default:
+                if(opensigns == 0) {
+                    //lowercase letters are smaller then upper case letter so if we count them as 0,8125 the length
+                    if(text[i].match(/[a-z]+/g) && casesensitive){
+                        count += 0.8125;
+                    }
+                    else {
+                        if(text[i].match(/[A-Z]+/g) && casesensitive){
+                            count += 1;
+                        }
+                        else {
+                            count += 0.2;
+                        }
+                    }
+                }
+                break;
+        }
+    }
+    return count;
+}
+
+function get_message_substring(text,length,start) {
+    var opensigns = 0;
+    var count = 0;
+    var substring = ""
+    var openword = "";
+    var backupword = "";
+    for (var i = 0; i < text.length; i++) {
+        var addtosubstring = false;
+
+        // Store a backupword incase it's to long to fit on 1 line and has to be cut anyways.
+        if(count >= start) {
+            backupword += text[i]
+        }
+
+        switch(text[i]) {
+            case "{":
+                opensigns ++;
+                addtosubstring = true;
+                break;
+
+            case "}":
+                opensigns --;
+                addtosubstring = true;
+                break;
+
+            default:
+                if(opensigns == 0) {
+                    //lowercase letters are smaller then upper case letter so if we count them as 0,8125 the length
+                    if(text[i].match(/[a-z]+/g)){
+                        count += 0.8125;
+                    }
+                    else {
+                        if(text[i].match(/[A-Z]+/g)){
+                            count += 1;
+                        }
+                        else {
+                            count += 0.2;
+                            addtosubstring = true;
+                        }
+                    }
+                }
+                else {
+                    addtosubstring = true;
+                }
+                break;
+        }
+
+        openword += text[i];
+
+        if(addtosubstring){
+            if(count >= start) {
+                substring += openword;
+            }
+            openword = "";
+        }
+
+
+        if(count >= (start + length)) {
+            // Check if there are any actual signs in the message, if not add the openword to it.
+            if(get_message_actual_length(substring,false) == 0) {
+                substring += backupword;
+            }
+            break;
+        }
+    }
+    return substring;
 }
 
 function get_image_formatting(spritenum) {
@@ -274,6 +399,10 @@ function validate_message() {
             }
         }
     }
+    if(get_message_actual_length(new_message_text,false) > 248) {
+        ui.showError("Park Message Manager:", "Message is to long.");
+        return false;
+    }
 
     return true;
 }
@@ -396,7 +525,7 @@ function add_message_window() {
         y: 105,
         width: 390,
         height: 40,
-        maxLength: 100,
+        maxLength: 1000,
         onChange: function onChange(e) {
             new_message_text = e;
         }
@@ -504,27 +633,31 @@ function messages_window() {
 
     window = ui.openWindow({
         classification: 'Park Messages',
-        title: "Park Message Manager 1.1 (by Levis)",
+        title: "Park Message Manager 1.2 (by Levis)",
         width: 500,
         height: 325,
         x: 20,
         y: 50,
         colours: [12, 12], //12
-        widgets: widgets
+        widgets: widgets,
+        onClose: function onClose() {
+            context.clearInterval(message_refresh);
+        }
     });
 }
 
 var main = function () {
     // Add a menu item under the map icon on the top toolbar
     ui.registerMenuItem("Manage Park Messages", function () {
-        update_parkmessages();
+        message_refresh = context.setInterval(update_widget_messagelist, 1000);
         messages_window();
+        update_widget_messagelist();
     });
 };
 
 registerPlugin({
     name: 'Park Message Manager',
-    version: '1.1',
+    version: '1.2',
     authors: ['AutoSysOps (Levis)'],
     type: 'remote',
     licence: 'MIT',
