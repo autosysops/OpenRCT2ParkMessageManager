@@ -9,6 +9,7 @@ var new_message_colour = "TOPAZ";
 var new_message_text = "";
 var new_subject = -1;
 var message_refresh = 0;
+var filter_archived = true;
 
 var columns = [
     {
@@ -70,7 +71,7 @@ function update_parkmessages() {
     // Clear first
     parkmessages = [];
     for (var pm = 0; pm < park.messages.length; pm++) {
-        if(park.messages[pm].isArchived) {
+        if (park.messages[pm].isArchived || filter_archived == false) {
             // Create a seperator with the date of the message
             var date = calculate_date(park.messages[pm].day, park.messages[pm].month);
             if (selected_message == pm) {
@@ -101,15 +102,15 @@ function update_parkmessages() {
             for (var m = 0; m < messagetexts.length; m++) {
                 // Check if message is to long and if so break it up in parts.
                 var mts = [];
-                if(get_message_actual_length(messagetexts[m],true) > MAX_LINE_LENGTH) {
+                if (get_message_actual_length(messagetexts[m], true) > MAX_LINE_LENGTH) {
                     var start = 0;
                     do {
-                        var substring = get_message_substring(messagetexts[m],MAX_LINE_LENGTH,start);
+                        var substring = get_message_substring(messagetexts[m], MAX_LINE_LENGTH, start);
                         start += MAX_LINE_LENGTH;
-                        if(substring != "") {
+                        if (substring != "") {
                             mts.push(substring);
                         }
-                    } while(substring != "")
+                    } while (substring != "")
                 }
                 else {
                     mts.push(messagetexts[m]);
@@ -153,27 +154,27 @@ function update_parkmessages() {
     }
 }
 
-function get_message_actual_length(text,casesensitive) {
+function get_message_actual_length(text, casesensitive) {
     var opensigns = 0;
     var count = 0;
     for (var i = 0; i < text.length; i++) {
-        switch(text[i]) {
+        switch (text[i]) {
             case "{":
-                opensigns ++;
+                opensigns++;
                 break;
 
             case "}":
-                opensigns --;
+                opensigns--;
                 break;
 
             default:
-                if(opensigns == 0) {
+                if (opensigns == 0) {
                     //lowercase letters are smaller then upper case letter so if we count them as 0,8125 the length
-                    if(text[i].match(/[a-z]+/g) && casesensitive){
+                    if (text[i].match(/[a-z]+/g) && casesensitive) {
                         count += 0.8125;
                     }
                     else {
-                        if(text[i].match(/[A-Z]+/g) && casesensitive){
+                        if (text[i].match(/[A-Z]+/g) && casesensitive) {
                             count += 1;
                         }
                         else {
@@ -187,7 +188,7 @@ function get_message_actual_length(text,casesensitive) {
     return count;
 }
 
-function get_message_substring(text,length,start) {
+function get_message_substring(text, length, start) {
     var opensigns = 0;
     var count = 0;
     var substring = ""
@@ -197,29 +198,29 @@ function get_message_substring(text,length,start) {
         var addtosubstring = false;
 
         // Store a backupword incase it's to long to fit on 1 line and has to be cut anyways.
-        if(count >= start) {
+        if (count >= start) {
             backupword += text[i]
         }
 
-        switch(text[i]) {
+        switch (text[i]) {
             case "{":
-                opensigns ++;
+                opensigns++;
                 addtosubstring = true;
                 break;
 
             case "}":
-                opensigns --;
+                opensigns--;
                 addtosubstring = true;
                 break;
 
             default:
-                if(opensigns == 0) {
+                if (opensigns == 0) {
                     //lowercase letters are smaller then upper case letter so if we count them as 0,8125 the length
-                    if(text[i].match(/[a-z]+/g)){
+                    if (text[i].match(/[a-z]+/g)) {
                         count += 0.8125;
                     }
                     else {
-                        if(text[i].match(/[A-Z]+/g)){
+                        if (text[i].match(/[A-Z]+/g)) {
                             count += 1;
                         }
                         else {
@@ -236,17 +237,17 @@ function get_message_substring(text,length,start) {
 
         openword += text[i];
 
-        if(addtosubstring){
-            if(count >= start) {
+        if (addtosubstring) {
+            if (count >= start) {
                 substring += openword;
             }
             openword = "";
         }
 
 
-        if(count >= (start + length)) {
+        if (count >= (start + length)) {
             // Check if there are any actual signs in the message, if not add the openword to it.
-            if(get_message_actual_length(substring,false) == 0) {
+            if (get_message_actual_length(substring, false) == 0) {
                 substring += backupword;
             }
             break;
@@ -399,7 +400,7 @@ function validate_message() {
             }
         }
     }
-    if(get_message_actual_length(new_message_text,false) > 248) {
+    if (get_message_actual_length(new_message_text, false) > 248) {
         ui.showError("Park Message Manager:", "Message is to long.");
         return false;
     }
@@ -407,14 +408,98 @@ function validate_message() {
     return true;
 }
 
+function add_image_window() {
+    widgets = []
+
+    window = ui.openWindow({
+        classification: 'Add Image',
+        title: "Select the image to add",
+        width: 400,
+        height: 175,
+        x: 200,
+        y: 100,
+        colours: [12, 12], //12
+        widgets: widgets
+    });
+}
+
+function update_edit_message(edit_line) {
+    var listwindow = ui.getWindow("Add Park Messages");
+    var numlines = 7
+
+    // Get all lines
+    var activeline = 1;
+    var line = "";
+    var textbox = null;
+    new_message_text = ""
+    for (var i = 1; i <= numlines; i++) {
+        textbox = listwindow.findWidget("message_textbox_line" + i);
+        line = textbox.text;
+        new_message_text += line.replace("{_NEWLINE}", "{NEWLINE}");
+
+        if (line.length >= 70) {
+            activeline++;
+
+            // Move text which is to much to the next line
+            if (i < numlines) {
+                textbox.text = line.substring(0,70)
+                listwindow.findWidget("message_textbox_line" + (i+1)).text = line.substring(70,line.length) + listwindow.findWidget("message_textbox_line" + (i+1)).text
+            }
+        }
+
+    }
+
+    // Check if current line is reduced to 0 length
+    if (activeline == edit_line && listwindow.findWidget("message_textbox_line" + activeline).text.length == 0) {
+        activeline--;
+        if (activeline == 0) {
+            activeline = 1
+        }
+    }
+
+    // Check if activeline is not to big
+    if (activeline > numlines) {
+        activeline = numlines;
+    }
+
+    // Set the right line active
+    for (i = 1; i <= numlines; i++) {
+        if (i == activeline) {
+            listwindow.findWidget("message_textbox_line" + i).isDisabled = false
+            listwindow.findWidget("line_label" + i).text = ">"
+        }
+        else {
+            listwindow.findWidget("message_textbox_line" + i).isDisabled = true
+            listwindow.findWidget("line_label" + i).text = ""
+        }
+    }
+
+    var preview = listwindow.findWidget("preview_message");
+    preview.text = new_message_text;
+
+    return activeline;
+}
+
 function add_message_window() {
     widgets = []
+
+    var curline = 1;
+
+    widgets.push({
+        type: 'groupbox',
+        name: 'box1',
+        x: 5,
+        y: 15,
+        width: 590,
+        height: 60,
+        text: "Type"
+    });
 
     widgets.push({
         type: "dropdown",
         name: "message_type_dropdown",
         x: 10,
-        y: 20,
+        y: 30,
         width: 200,
         height: 15,
         items: messagetypes.map(function (type) {
@@ -433,7 +518,7 @@ function add_message_window() {
         type: "dropdown",
         name: "message_colour_dropdown",
         x: 10,
-        y: 45,
+        y: 50,
         width: 200,
         height: 15,
         items: messagecolours.map(function (colour) {
@@ -449,7 +534,7 @@ function add_message_window() {
         type: 'label',
         name: 'previewimage',
         x: 220,
-        y: 15,
+        y: 20,
         width: 25,
         height: 25,
         text: "{INLINE_SPRITE}{67}{20}{00}{00}"
@@ -459,7 +544,7 @@ function add_message_window() {
         type: 'label',
         name: 'label_guest',
         x: 250,
-        y: 25,
+        y: 30,
         width: 145,
         height: 15,
         text: "Enter guest id (Sprite id)",
@@ -470,7 +555,7 @@ function add_message_window() {
         type: 'textbox',
         name: "guestid_textbox",
         x: 220,
-        y: 45,
+        y: 50,
         width: 170,
         height: 15,
         maxLength: 100,
@@ -484,7 +569,7 @@ function add_message_window() {
         type: 'label',
         name: 'label_ride',
         x: 250,
-        y: 25,
+        y: 30,
         width: 145,
         height: 15,
         text: "Select the ride.",
@@ -495,7 +580,7 @@ function add_message_window() {
         type: 'dropdown',
         name: "rideid_dropdown",
         x: 220,
-        y: 45,
+        y: 50,
         width: 170,
         height: 15,
         isVisible: true,
@@ -509,33 +594,291 @@ function add_message_window() {
     });
 
     widgets.push({
-        type: 'label',
-        name: 'label',
-        x: 10,
-        y: 70,
-        width: 390,
-        height: 80,
-        text: "Enter the message text. Use NEWLINE in between curly brackets{NEWLINE}to make the text after it start on a new line.{NEWLINE}Select the type of message and colour in the dropdown boxes above."
+        type: 'button',
+        name: "tinyfont",
+        x: 5,
+        y: 80,
+        width: 20,
+        height: 20,
+        text: "{TINYFONT}A",
+        onClick: function onClick() {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{TINYFONT}"
+        }
+    });
+
+    widgets.push({
+        type: 'button',
+        name: "SMALLFONT",
+        x: 30,
+        y: 80,
+        width: 20,
+        height: 20,
+        text: "{SMALLFONT}A",
+        onClick: function onClick() {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{SMALLFONT}"
+        }
+    });
+
+    widgets.push({
+        type: 'button',
+        name: "MEDIUMFONT",
+        x: 55,
+        y: 80,
+        width: 20,
+        height: 20,
+        text: "{MEDIUMFONT}A",
+        onClick: function onClick() {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{MEDIUMFONT}"
+        }
+    });
+
+    widgets.push({
+        type: 'button',
+        name: "NEWLINE",
+        x: 80,
+        y: 80,
+        width: 20,
+        height: 20,
+        text: "/nr",
+        onClick: function onClick() {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{_NEWLINE}"
+        }
+    });
+
+    widgets.push({
+        type: 'button',
+        name: "NEWLINE_SMALLER",
+        x: 105,
+        y: 80,
+        width: 20,
+        height: 20,
+        text: "/n",
+        onClick: function onClick() {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{NEWLINE_SMALLER}"
+        }
+    });
+
+    widgets.push({
+        type: "dropdown",
+        name: "colour_edit",
+        x: 130,
+        y: 80,
+        width: 200,
+        height: 20,
+        items: messagecolours.map(function (colour) {
+            return ("{" + colour + "}" + colour);
+        }),
+        selectedIndex: 6,
+        onChange: function onChange(e) {
+            var listwindow = ui.getWindow("Add Park Messages")
+            var textbox = listwindow.findWidget("message_textbox_line" + curline);
+            textbox.text = textbox.text + "{" + messagecolours[e] + "}"
+        }
     });
 
     widgets.push({
         type: 'textbox',
-        name: "message_textbox",
+        name: "message_textbox_line1",
+        x: 15,
+        y: 105,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: false,
+        onChange: function onChange(e) {
+            curline = update_edit_message(1)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label1',
         x: 5,
         y: 105,
-        width: 390,
-        height: 40,
-        maxLength: 1000,
+        width: 10,
+        height: 15,
+        text: ">"
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line2",
+        x: 15,
+        y: 120,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
         onChange: function onChange(e) {
-            new_message_text = e;
+            curline = update_edit_message(2)
         }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label2',
+        x: 5,
+        y: 120,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line3",
+        x: 15,
+        y: 135,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
+        onChange: function onChange(e) {
+            curline = update_edit_message(3)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label3',
+        x: 5,
+        y: 135,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line4",
+        x: 15,
+        y: 150,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
+        onChange: function onChange(e) {
+            curline = update_edit_message(4)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label4',
+        x: 5,
+        y: 150,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line5",
+        x: 15,
+        y: 165,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
+        onChange: function onChange(e) {
+            curline = update_edit_message(5)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label5',
+        x: 5,
+        y: 165,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line6",
+        x: 15,
+        y: 180,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
+        onChange: function onChange(e) {
+            curline = update_edit_message(6)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label6',
+        x: 5,
+        y: 180,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'textbox',
+        name: "message_textbox_line7",
+        x: 15,
+        y: 195,
+        width: 580,
+        height: 15,
+        maxLength: 2000,
+        isDisabled: true,
+        onChange: function onChange(e) {
+            curline = update_edit_message(7)
+        }
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'line_label7',
+        x: 5,
+        y: 195,
+        width: 10,
+        height: 15,
+        text: ""
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'preview_label',
+        x: 5,
+        y: 213,
+        width: 100,
+        height: 15,
+        text: "Preview:"
+    });
+
+    widgets.push({
+        type: 'label',
+        name: 'preview_message',
+        x: 5,
+        y: 225,
+        width: 590,
+        height: 50,
+        text: "..."
     });
 
     widgets.push({
         type: 'button',
         name: "Add-messagetext-button",
         x: 5,
-        y: 150,
+        y: 275,
         width: 390,
         height: 20,
         text: "Add the new message.",
@@ -551,8 +894,8 @@ function add_message_window() {
     window = ui.openWindow({
         classification: 'Add Park Messages',
         title: "Add a park message",
-        width: 400,
-        height: 175,
+        width: 600,
+        height: 300,
         x: 100,
         y: 100,
         colours: [12, 12], //12
@@ -567,9 +910,9 @@ function messages_window() {
         type: 'listview',
         name: 'list_messages',
         x: 5,
-        y: 20,
+        y: 40,
         width: 490,
-        height: 275,
+        height: 280,
         scrollbars: "vertical",
         isStriped: false,
         showColumnHeaders: false,
@@ -585,12 +928,28 @@ function messages_window() {
         }
     });
 
+    // Filter
+    widgets.push({
+        type: 'checkbox',
+        name: 'filter_archived',
+        x: 5,
+        y: 20,
+        width: 200,
+        height: 15,
+        isChecked: true,
+        text: "Only show archived messages.",
+        onChange: function onChange(e) {
+            filter_archived = !filter_archived
+            update_widget_messagelist();
+        }
+    });
+
     // Operators
     widgets.push({
         type: 'button',
         name: "Remove-selected-button",
         x: 5,
-        y: 300,
+        y: 325,
         width: 150,
         height: 20,
         text: "Delete Selected Message",
@@ -607,7 +966,7 @@ function messages_window() {
         type: 'button',
         name: "Remove-all-button",
         x: 175,
-        y: 300,
+        y: 325,
         width: 150,
         height: 20,
         text: "Delete All Message",
@@ -622,7 +981,7 @@ function messages_window() {
         type: 'button',
         name: "Add-message-button",
         x: 345,
-        y: 300,
+        y: 325,
         width: 150,
         height: 20,
         text: "Add new Message",
@@ -633,9 +992,9 @@ function messages_window() {
 
     window = ui.openWindow({
         classification: 'Park Messages',
-        title: "Park Message Manager 1.2 (by Levis)",
+        title: "Park Message Manager 1.3 (by Levis)",
         width: 500,
-        height: 325,
+        height: 350,
         x: 20,
         y: 50,
         colours: [12, 12], //12
@@ -657,9 +1016,10 @@ var main = function () {
 
 registerPlugin({
     name: 'Park Message Manager',
-    version: '1.2',
+    version: '1.3',
     authors: ['AutoSysOps (Levis)'],
     type: 'remote',
     licence: 'MIT',
+    targetApiVersion: 34,
     main: main
 });

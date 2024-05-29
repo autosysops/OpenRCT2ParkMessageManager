@@ -12,6 +12,8 @@ In game click the park map menu item, there you will see the option "Manage Park
 
 ## Changelog
 
+1.3 - Started the creation of a rich text editor so you can easily color text and make it smaller and bigger. Also added the option to see message which haven't been posted yet.
+
 1.2 - The window now refreshes every second and new messages are shown at the bottom. Also there is a check so messages which are to big can't be posted and the message overview window now cuts of messages so they are better readable.
 
 1.1 - Added option to select a ride or guest for the message which support it.
