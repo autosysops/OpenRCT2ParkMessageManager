@@ -10,6 +10,7 @@ var new_message_text = "";
 var new_subject = -1;
 var message_refresh = 0;
 var filter_archived = true;
+var filter_top = 25;
 
 var columns = [
     {
@@ -70,7 +71,14 @@ function add_message() {
 function update_parkmessages() {
     // Clear first
     parkmessages = [];
-    for (var pm = 0; pm < park.messages.length; pm++) {
+    var start = 0;
+    if(filter_top > 0) {
+        start = park.messages.length-filter_top;
+        if(start < 0) {
+            start = 0;
+        }
+    }
+    for (var pm = start; pm < park.messages.length; pm++) {
         if (park.messages[pm].isArchived || filter_archived == false) {
             // Create a seperator with the date of the message
             var date = calculate_date(park.messages[pm].day, park.messages[pm].month);
@@ -353,6 +361,17 @@ function update_widget_previewimage(imagetype) {
     else {
         previewimage.text = "";
     }
+}
+
+function update_filter_top(amount) {
+    var widget = ui.getWindow("Park Messages").findWidget("filter_top_spinner");
+    filter_top = filter_top + amount
+    
+    if(filter_top < 0) {
+        filter_top = 0;
+    }
+
+    widget.text = ""+filter_top;
 }
 
 function update_window_selectsubject(subjecttype) {
@@ -944,6 +963,32 @@ function messages_window() {
         }
     });
 
+    widgets.push({
+        type: 'label',
+        name: 'filter_top_label',
+        x: 360,
+        y: 20,
+        width: 35,
+        height: 15,
+        text: "Top:"
+    });
+
+    widgets.push({
+        type: "spinner",
+        name: "filter_top_spinner",
+        x: 395,
+        y: 20,
+        width: 100,
+        height: 15,
+        text: ""+filter_top,
+        onDecrement: function onDecrement(e) {
+            update_filter_top(-1)
+        },
+        onIncrement: function onIncrement(e) {
+            update_filter_top(1)
+        }
+    });
+
     // Operators
     widgets.push({
         type: 'button',
@@ -992,7 +1037,7 @@ function messages_window() {
 
     window = ui.openWindow({
         classification: 'Park Messages',
-        title: "Park Message Manager 1.3 (by Levis)",
+        title: "Park Message Manager 1.4 (by Levis)",
         width: 500,
         height: 350,
         x: 20,
