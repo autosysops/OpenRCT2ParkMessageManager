@@ -486,6 +486,8 @@ function update_edit_message(edit_line) {
         if (i == activeline) {
             listwindow.findWidget("message_textbox_line" + i).isDisabled = false
             listwindow.findWidget("line_label" + i).text = ">"
+            // Set the focus to the active line
+            listwindow.findWidget("message_textbox_line" + i).focus();
         }
         else {
             listwindow.findWidget("message_textbox_line" + i).isDisabled = true
@@ -624,6 +626,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{TINYFONT}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -639,6 +643,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{SMALLFONT}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -654,6 +660,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{MEDIUMFONT}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -669,6 +677,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{_NEWLINE}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -684,6 +694,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{NEWLINE_SMALLER}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -702,6 +714,8 @@ function add_message_window() {
             var listwindow = ui.getWindow("Add Park Messages")
             var textbox = listwindow.findWidget("message_textbox_line" + curline);
             textbox.text = textbox.text + "{" + messagecolours[e] + "}"
+            // Set the focus back to the current line textbox after clicking the button
+            textbox.focus();
         }
     });
 
@@ -1037,7 +1051,7 @@ function messages_window() {
 
     window = ui.openWindow({
         classification: 'Park Messages',
-        title: "Park Message Manager 1.4 (by Levis)",
+        title: "Park Message Manager 1.5 (by Levis)",
         width: 500,
         height: 350,
         x: 20,
@@ -1061,7 +1075,7 @@ var main = function () {
 
 registerPlugin({
     name: 'Park Message Manager',
-    version: '1.3',
+    version: '1.5',
     authors: ['AutoSysOps (Levis)'],
     type: 'remote',
     licence: 'MIT',

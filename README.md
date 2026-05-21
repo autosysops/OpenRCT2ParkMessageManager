@@ -12,6 +12,8 @@ In game click the park map menu item, there you will see the option "Manage Park
 
 ## Changelog
 
+1.5 - Make sure the text editor keeps focus on the right line when typing and adding color or other rich text
+
 1.4 - Added the "top" filter to determine how many messages are loaded
 
 1.3 - Started the creation of a rich text editor so you can easily color text and make it smaller and bigger. Also added the option to see message which haven't been posted yet.
